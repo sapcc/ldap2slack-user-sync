@@ -1,37 +1,45 @@
 package main
 
 import (
-	"flag"
-	"os"
-	"gopkg.in/ldap.v2"
 	"crypto/tls"
+	"flag"
 	"fmt"
 	"log"
+	"os"
 	"strings"
+
+	"gopkg.in/ldap.v2"
 )
 
 var (
-	region   	  = flag.String("region", "staging", "The domain for the uniform distribution.")
-
-	user		  = os.Getenv("LDAP_BIND_USER")
-	bindpassword  = os.Getenv("LDAP_BIND_PWD")
-	bindusername  = fmt.Sprintf("CN=%s,OU=Identities,DC=ad,DC=%s,DC=cloud,DC=sap", user, *region)
-	searchCn 	  = fmt.Sprintf("CN=CP_CONV_SLACK_ACK,OU=Permissions,OU=CCloud,DC=ad,DC=%s,DC=cloud,DC=sap", *region)
-	baseCn 	 	  = fmt.Sprintf("DC=ad,DC=%s,DC=cloud,DC=sap", *region)
-	ldapHost 	  = fmt.Sprintf("ldap.%s.cloud.sap", *region)
-	ldapPort 	  = 636
+	region       = flag.String("region", fmt.Sprintf(os.Getenv("LDAP_REGION")), "the domain")
+	bindpassword = os.Getenv("LDAP_BIND_PWD")
+	bindusername = flag.String("LDAP_BIND_USER_CN", fmt.Sprintf(os.Getenv("LDAP_BIND_USER_CN"), *region), "e.g. CN=USER_CN,OU=Identities,DC=%s,DC=COMPANY,DC=com")
+	searchCn     = flag.String("LDAP_SEARCH_CN", fmt.Sprintf(os.Getenv("LDAP_SEARCH_CN"), *region), "e.g CN=USER_CN,OU=Identities,DC=%s,DC=COMPANY,DC=COM")
+	baseCn       = flag.String("LDAP_BASE_CN", fmt.Sprintf(os.Getenv("LDAP_BASE_CN"), *region), "e.g. DC=%s,DC=COMPANY,DC=COM")
+	ldapHost     = flag.String("LDAP_HOST", fmt.Sprintf(os.Getenv("LDAP_HOST"), *region), "ldap host, e.g. ldap.%s.com")
+	ldapPort     = flag.Int("LDAP_PORT", 636, "ldap port - default is default ldaps port")
 )
 
 func main() {
+	
+	// check env settings
+	for _, e := range os.Environ() {
+		pair := strings.SplitN(e, "=", 2)
+		if strings.Compare(pair[0], "LDAP_BIND_PWD") == 0 {
+			fmt.Println(fmt.Sprintf("%s:\t\t *********", pair[0]))
+			continue
+		}
+		if strings.HasPrefix(pair[0], "LDAP") {
+			fmt.Println(fmt.Sprintf("%s:\t\t %s", pair[0], pair[1]))
+			//fmt.Println(pair)
+		}
+	}
 
-    for _, e := range os.Environ() {
-		pair := strings.Split(e, "=")
-		fmt.Println(pair)
-        //fmt.Println(pair[0],pair[1],pair)
-    }
+	fmt.Println(fmt.Sprintf("connect %s @ %s:%d", *bindusername, *ldapHost, *ldapPort))
 
 	tlsConfig := &tls.Config{InsecureSkipVerify: true}
-	l, err := ldap.DialTLS("tcp", fmt.Sprintf("%s:%d", ldapHost, ldapPort), tlsConfig)
+	l, err := ldap.DialTLS("tcp", fmt.Sprintf("%s:%d", *ldapHost, *ldapPort), tlsConfig)
 
 	if err != nil {
 		log.Fatal(err)
@@ -39,20 +47,20 @@ func main() {
 	defer l.Close()
 
 	// First bind read user
-	err = l.Bind(bindusername, bindpassword)
+	err = l.Bind(*bindusername, bindpassword)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// Search Request Definition
 	searchRequest := ldap.NewSearchRequest(
-		baseCn,
+		*baseCn,
 		ldap.ScopeWholeSubtree,
 		ldap.NeverDerefAliases,
 		0,
 		0,
 		false,
-		fmt.Sprintf("(&(objectClass=organizationalPerson)(memberof=%s))", searchCn),
+		fmt.Sprintf("(&(objectClass=organizationalPerson)(memberof=%s))", *searchCn),
 		[]string{"dn", "sn", "givenName", "cn", "displayName"},
 		nil,
 	)
