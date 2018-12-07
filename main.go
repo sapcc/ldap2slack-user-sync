@@ -7,8 +7,8 @@ import (
 	"log"
 	"os"
 	"strings"
-
 	"gopkg.in/ldap.v2"
+	"github.com/nlopes/slack"
 )
 
 var (
@@ -21,21 +21,7 @@ var (
 	ldapPort     = flag.Int("LDAP_PORT", 636, "ldap port - default is default ldaps port")
 )
 
-func main() {
-	
-	// check env settings
-	for _, e := range os.Environ() {
-		pair := strings.SplitN(e, "=", 2)
-		if strings.Compare(pair[0], "LDAP_BIND_PWD") == 0 {
-			fmt.Println(fmt.Sprintf("%s:\t\t *********", pair[0]))
-			continue
-		}
-		if strings.HasPrefix(pair[0], "LDAP") {
-			fmt.Println(fmt.Sprintf("%s:\t\t %s", pair[0], pair[1]))
-			//fmt.Println(pair)
-		}
-	}
-
+func getLdapUser() []*ldap.Entry {
 	fmt.Println(fmt.Sprintf("connect %s @ %s:%d", *bindusername, *ldapHost, *ldapPort))
 
 	tlsConfig := &tls.Config{InsecureSkipVerify: true}
@@ -70,10 +56,45 @@ func main() {
 		log.Fatal(err)
 	}
 
-	for i, s := range sr.Entries {
+	return sr.Entries
+}
+
+func getSlackGroups(){
+	api := slack.New("YOUR_TOKEN_HERE")
+	// If you set debugging, it will log all requests to the console
+	// Useful when encountering issues
+	// api.SetDebug(true)
+	groups, err := api.GetGroups(false)
+	if err != nil {
+		fmt.Printf("%s\n", err)
+		return
+	}
+	for _, group := range groups {
+		fmt.Printf("ID: %s, Name: %s\n", group.ID, group.Name)
+	}
+}
+
+func main() {
+	
+	// check env settings
+	for _, e := range os.Environ() {
+		pair := strings.SplitN(e, "=", 2)
+		if strings.Compare(pair[0], "LDAP_BIND_PWD") == 0 {
+			fmt.Println(fmt.Sprintf("%s:\t\t *********", pair[0]))
+			continue
+		}
+		if strings.HasPrefix(pair[0], "LDAP") {
+			fmt.Println(fmt.Sprintf("%s:\t\t %s", pair[0], pair[1]))
+			//fmt.Println(pair)
+		}
+	}
+
+
+	for i, s := range getLdapUser() {
 		fmt.Println(i, s.DN, "\t", s.GetAttributeValue("cn"), s.GetAttributeValue("displayName"))
 		/*for z, a := range s.Attributes {
 			fmt.Println(z, a)
 		}*/
 	}
+
 }
