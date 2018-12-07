@@ -18,7 +18,9 @@ You can use either Enviroment or command line attributes - but this must be set.
 | LDAP_PORT | 636 |   
 | LDAP_SEARCH_CN | LDAP search string  e.g CN=USER_CN,OU=Identities,DC=%s,DC=COMPANY,DC=COM |   
 | LDAP_BASE_CN | LDAP entry layer e.g. DC=%s,DC=COMPANY,DC=COM |   
+| SLACK_TOKEN | SLACK access token, e.g. xoxp-........-............-..............-50235a12bf60f31c0CCcec5ac72d93F68 |   
 
+## Visual Studio Code launch.json
 
 If you use Visual Studio Code, you could use this .launch.json
 ```
@@ -39,6 +41,7 @@ If you use Visual Studio Code, you could use this .launch.json
                 "LDAP_BIND_PWD":"whateverIsSecret" 
                 "LDAP_SEARCH_CN":"CN=USER_CN,OU=Identities,DC=%s,DC=COMPANY,DC=COM",
                 "LDAP_BASE_CN":"DC=%s,DC=COMPANY,DC=COM",
+                "SLACK_TOKEN":"xoxp-........-............-..............-50235a12bf60f31c0CCcec5ac72d93F68"
             }
         }
     ]
