@@ -3,7 +3,13 @@
 
 ## purpose
 
-Adds User from a specific LDAP Group to an Slack Group
+Adds User from a specific LDAP Group to a specific Slack Group. 
+Yeah - more flexibility would be good #later - it's a simple script.
+
+It does not add Users to Slack.
+It just adds exsisting Slack User, which map to a LDAP User, to the group.
+If deleted in the LDAP group than this causes a remove from the SLACK group, too.
+
 
 ## debug hints
 

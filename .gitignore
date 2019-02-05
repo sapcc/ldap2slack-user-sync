@@ -1,1 +1,8 @@
+# dirs
 .vscode
+bin/**
+vendor/**
+pkg
+# files
+.todo.md
+*.test
