@@ -6,3 +6,4 @@ vendor/**
 # files
 .todo.md
 *.test
+config_debug.yml

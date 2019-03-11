@@ -1,0 +1,17 @@
+default:
+  mode: "sync"
+  write: false
+
+slack:
+  securityToken: DEFINED-IN-SECRETS
+  targetGroup: DEFINED-IN-SECRETS
+
+ldap:
+  region: DEFINED-IN-SECRETS
+  host: DEFINED-IN-SECRETS
+  bindUser: DEFINED-IN-SECRETS
+  bindPwd: DEFINED-IN-SECRETS
+  searchCN: DEFINED-IN-SECRETS
+  baseCN: DEFINED-IN-SECRETS
+  certificates: DEFINED-IN-SECRETS
+  

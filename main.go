@@ -17,7 +17,7 @@ const (
 )
 
 var (
-	mode			 = flag.String("MODE", "sync", fmt.Sprintf("%s|%s",diff , sync))
+	mode             = flag.String("MODE", "sync", fmt.Sprintf("%s|%s", diff, sync))
 	region           = flag.String("LDAP_REGION", os.Getenv("LDAP_REGION"), "the domain")
 	ldapBindPassword = flag.String("LDAP_BIND_PWD", os.Getenv("LDAP_BIND_PWD"), "")
 	ldapBindUserName = flag.String("LDAP_BIND_USER_CN", os.Getenv("LDAP_BIND_USER_CN"), "e.g. CN=USER_CN,OU=Identities,DC=%s,DC=COMPANY,DC=com")
@@ -25,7 +25,7 @@ var (
 	ldapBaseCn       = flag.String("LDAP_BASE_CN", os.Getenv("LDAP_BASE_CN"), "e.g. DC=%s,DC=COMPANY,DC=COM")
 	ldapHost         = flag.String("LDAP_HOST", os.Getenv("LDAP_HOST"), "ldap host, e.g. ldap.%s.com")
 	ldapPort         = flag.Int("LDAP_PORT", 636, "ldap port - default is default ldaps port")
-	ldapCerts		 = os.Getenv("LDAP_CERTIFICATES")
+	ldapCerts        = os.Getenv("LDAP_CERTIFICATES")
 	slackAccessToken = flag.String("SLACK_TOKEN", os.Getenv("SLACK_TOKEN"), "SLACK security legacy token (starting with 'xoxp-')")
 	slackGroupName   = flag.String("SLACK_LDAP_GROUP", os.Getenv("SLACK_LDAP_GROUP"), "SLACK group name (not ID) where u wanna add the LDAP users to")
 	bWrite           = false
@@ -87,33 +87,32 @@ func main() {
 		}
 		if strings.HasPrefix(pair[0], "LDAP") {
 			log.Println(fmt.Sprintf("%s:\t\t %s", pair[0], pair[1]))
- 		}
+		}
 	}
-
 
 	slackClient := slack.GetASlackClient(*slackAccessToken)
 	// get all slack groups
 	slckGrps := slack.GetSlackGroups(*slackClient, *slackGroupName, true)
 
 	switch *mode {
-		case sync:
+	case sync:
 
-			// find members of given group
-			ldapUser := ldap.GetLdapUser(*ldapBaseCn, *ldapBindUserName, *ldapHost, *ldapBindPassword, *ldapSearchCn, *ldapPort)
+		// find members of given group
+		ldapUser := ldap.GetLdapUser(*ldapBaseCn, *ldapBindUserName, *ldapHost, *ldapBindPassword, *ldapSearchCn, *ldapPort)
 
-			// get all SLACK users, bcz. we need the SLACK user id and match them with the ldap users
-			slckUserFilderedList := slack.GetSlackUser(*slackClient, ldapUser)
+		// get all SLACK users, bcz. we need the SLACK user id and match them with the ldap users
+		slckUserFilderedList := slack.GetSlackUser(*slackClient, ldapUser)
 
-			// put ldap users which also have a slack account to our slack group (who's not in the ldap group is out)
-			slack.SetSlackGroupUser(*slackClient, slckGrps, *slackGroupName, slckUserFilderedList, bWrite)
+		// put ldap users which also have a slack account to our slack group (who's not in the ldap group is out)
+		slack.SetSlackGroupUser(*slackClient, slckGrps, *slackGroupName, slckUserFilderedList, bWrite)
 
-		case diff:
-			slckUserList := slack.GetSlackUser(*slackClient, nil)
-			slack.DiffSlackGroups(slckUserList, slckGrps, *slackGroupName, "CCloud_DevOps")
-			slack.DiffSlackGroups(slckUserList, slckGrps, "CCloud_DevOps", *slackGroupName)
-			slack.DiffSlackGroups(slckUserList, slckGrps, "Markus_Direct_Reports", *slackGroupName)
-		default:
+	case diff:
+		slckUserList := slack.GetSlackUser(*slackClient, nil)
+		slack.DiffSlackGroups(slckUserList, slckGrps, *slackGroupName, "CCloud_DevOps")
+		slack.DiffSlackGroups(slckUserList, slckGrps, "CCloud_DevOps", *slackGroupName)
+		slack.DiffSlackGroups(slckUserList, slckGrps, "Markus_Direct_Reports", *slackGroupName)
+	default:
 
-    }
+	}
 
 }
