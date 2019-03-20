@@ -1,17 +1,54 @@
 default:
-  mode: "sync"
-  write: false
-
-slack:
-  securityToken: DEFINED-IN-SECRETS
-  targetGroup: DEFINED-IN-SECRETS
-
-ldap:
-  region: DEFINED-IN-SECRETS
-  host: DEFINED-IN-SECRETS
-  bindUser: DEFINED-IN-SECRETS
-  bindPwd: DEFINED-IN-SECRETS
-  searchCN: DEFINED-IN-SECRETS
-  baseCN: DEFINED-IN-SECRETS
-  certificates: DEFINED-IN-SECRETS
+   mode: "sync"
+   write: true
+ 
+# slack:
+#   # string, example: "xoxp-7427940 ...."
+#   securityToken: DEFINED-IN-SECRETS
+# 
+#   # string, example: "my-slack-group-for-channels"
+#   targetGroup: DEFINED-IN-SECRETS
+# 
+#   # [][]string, example
+#   # - [ groupA, groupB ]
+#   # - [ groupB, groupA ]
+#   # - [ groupC, groupA ]
+#   diffGroups: DEFINED-IN-SECRETS 
+# 
+# ldap:
+#   
+#   # string, example: 
+#   host: ldaps.company.com
+#   
+#   # default - ldap: 389, ldaps: 636
+#   port: 389
+#   
+#   # string, example: "CN=LDAP_USER,OU=Resources,DC=company,DC=com"
+#   bindUser: DEFINED-IN-SECRETS
+#   
+#   # string
+#   bindPwd: DEFINED-IN-SECRETS
+#   
+#   # string, example: "DC=company,DC=com"
+#   baseCN: DEFINED-IN-SECRETS
+# 
+#   # []string, example: 
+#   # - "CN=MY_LDAP_GROUP_A,OU=Resources,DC=company,DC=com"
+#   # - "CN=MY_LDAP_GROUP_B,OU=Resources,DC=company,DC=com"
+#   #groupCNs: 
+#     - "CN=MY_LDAP_GROUP_A,OU=Resources,DC=company,DC=com"
+#     - "CN=MY_LDAP_GROUP_B,OU=Resources,DC=company,DC=com"
+# 
+#   # []string, example:
+#   # - |
+#   #   -----BEGIN CERTIFICATE-----
+#   #   MQswCQYDVQQGEwJERTERMA1GA1UEBwwIV2FsbGRvcmYxDzANBgNVBAoMBlNBUCBB
+#   #   ....
+#   #   -----END CERTIFICATE-----
+#   # - |
+#   #   -----BEGIN CERTIFICATE-----
+#   #   3mTRPgekYKY8JXsCXTqgfuW6QSnJ+88bHHMhMP7nPwv+YkPcsvCPBSY08ykzFATw
+#   #   ....
+#   #   -----END CERTIFICATE-----
+#   certificates: DEFINED-IN-SECRETS
   

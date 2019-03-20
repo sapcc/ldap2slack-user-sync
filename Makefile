@@ -37,6 +37,7 @@ docker-build: tests bin/linux/$(BINARY)
 	docker build -t $(IMAGE):$(VERSION) .
 
 docker-push: build
+
 	docker push $(IMAGE):$(VERSION)
 
 helm-latest: push helm-values

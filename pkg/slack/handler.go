@@ -2,40 +2,34 @@ package slack
 
 import (
 	"fmt"
-	"log"
+	
 	"strings"
-
+	log "github.com/Sirupsen/logrus"
 	linq "github.com/ahmetb/go-linq"
 	slack "github.com/nlopes/slack"
 	ldap "gopkg.in/ldap.v2"
 )
 
+// GetASlackClient provides a Slack Client Instance
 func GetASlackClient(slackAccessToken string) *slack.Client {
 	return slack.New(slackAccessToken, slack.OptionDebug(false))
 }
 
-func GetSlackGroups(slackAPI slack.Client, slackGroupName string, bWithUser bool) []slack.UserGroup {
+// GetSlackGroups requests existing Groups
+func GetSlackGroups(slackAPI slack.Client, slackGroupName string, bWithUser bool) ([]slack.UserGroup, error) {
 
-	defer func() {
-		if r := recover(); r != nil {
-			log.Fatal(fmt.Sprintf("SLACK>%s (Searched Group: %s)", r.(error), slackGroupName))
-		}
-	}()
-
-	//opt := []slack.GetUserGroupsOption{ slack.GetUserGroupsParams.IncludeUsers : bWithUser}
 	slackGroups, err := slackAPI.GetUserGroups(slack.GetUserGroupsOptionIncludeUsers(bWithUser))
 	if err != nil {
-		log.Fatal("SLACK", ">", err)
-		return nil
+		return slackGroups, fmt.Errorf(fmt.Sprintf("SLACK > %s", err))
 	}
 
 	for _, group := range slackGroups {
-		fmt.Printf("ID: %s, Name: %s, Count: %d (DateDeleted: %s) - %s\n", group.ID, group.Name, group.UserCount, group.DateDelete, group.Description)
+		log.Printf("SLACK Group: ID: %s, Name: %s, Count: %d (DateDeleted: %s) - %s\n", group.ID, group.Name, group.UserCount, group.DateDelete, group.Description)
 	}
-
-	return slackGroups
+	return slackGroups, nil
 }
 
+// GetSlackUser delivers Slack User
 func GetSlackUser(slackAPI slack.Client, ldapUsers []*ldap.Entry) []slack.User {
 
 	defer func() {
@@ -60,11 +54,13 @@ func GetSlackUser(slackAPI slack.Client, ldapUsers []*ldap.Entry) []slack.User {
 	var ul []slack.User
 	linq.From(slackUsers).WhereT(func(u slack.User) bool {
 		return (linq.From(ldapUsers).WhereT(func(ldapU *ldap.Entry) bool {
-			//fmt.Printf("SlackUser: %s - %s\n", ldapU.GetAttributeValue("cn"), u.Name)
-			return (strings.Compare(strings.ToLower(ldapU.GetAttributeValue("cn")), strings.ToLower(u.Name)) == 0)
+			// check on SAP ID and only not deleted Slack User
+			return (strings.Compare(strings.ToLower(ldapU.GetAttributeValue("cn")), strings.ToLower(u.Name)) == 0 && !u.Deleted)
 		}).Count() > 0)
 	}).SelectT(func(u slack.User) slack.User {
-		//fmt.Printf("SlackUser: %s - %s\n", u.ID, u.Name)
+		if (log.GetLevel() == log.DebugLevel) {
+			fmt.Printf("SlackUser: %s - %s (%s) - %t\n", u.ID, u.Name, u.Profile.DisplayName, u.Deleted)
+		}
 		return u
 	}).ToSlice(&ul)
 
@@ -106,18 +102,53 @@ func SetSlackGroupUser(slackAPI slack.Client, slackGroups []slack.UserGroup, sla
 	var slackUserIds []string
 	linq.From(slackUser).SelectT(func(u slack.User) string {
 		return u.ID
-	}).ToSlice(&slackUserIds)
+	}).Distinct().ToSlice(&slackUserIds)
 
 	if bWrite {
-		/*for _, user := range slackUserIds {
-			fmt.Printf("ID: %s\n", user)
-		}*/
-		slackAPI.UpdateUserGroupMembers(targetGroup.ID, strings.Join(slackUserIds, ","))
-		log.Println("SLACK>  changes were written!")
+		for i, user := range slackUserIds {
+			fmt.Printf("%d. ID: %s\n", i, user)
+		}
+		
+		log.Debug(strings.Join(slackUserIds, ","))
+
+		usergroup, err := slackAPI.UpdateUserGroupMembers(targetGroup.ID, strings.Join(slackUserIds, ","))
+		if err != nil {
+			log.Fatal("SLACK", "> SLACK error: ", err)
+		} else {
+			log.Println("SLACK> changes were written!", usergroup)
+		}
 	} else {
 		log.Println("SLACK> no changes were written, because flag 'bWrite' was set to 'false'")
 	}
 }
+
+// SendMessage sends a message 
+func SendMessage(slackAPI slack.Client, channel string) {
+
+	//slackAPI.SendMessage("")
+
+	attachment := slack.Attachment{
+		Pretext: "some pretext",
+		Text:    "some text",
+		// Uncomment the following part to send a field too
+		Fields: []slack.AttachmentField{
+			slack.AttachmentField{
+				Title: "a",
+				Value: "no",
+			},
+		},
+		
+	}
+
+	channelID, timestamp, err := slackAPI.PostMessage("C6LUQKM5K", slack.MsgOptionText("Some text", false), slack.MsgOptionAttachments(attachment))
+	if err != nil {
+		fmt.Printf("%s\n", err)
+		return
+	}
+	fmt.Printf("Message successfully sent to channel %s at %s", channelID, timestamp)
+
+}
+
 
 // DiffSlackGroups does a print out on who is in Slack Group A vs B 
 func DiffSlackGroups(slackUsers []slack.User, slckGrps []slack.UserGroup, groupA string, groupB string) {
@@ -150,3 +181,4 @@ func DiffSlackGroups(slackUsers []slack.User, slckGrps []slack.UserGroup, groupA
 		fmt.Println(userString)
 	})
 }
+

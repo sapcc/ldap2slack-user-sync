@@ -3,62 +3,70 @@ package ldap
 import (
 	"crypto/tls"
 	"fmt"
-	"log"
 
+	"github.com/sapcc/ldap2slack-user-sync/pkg/config"
 	ldap "gopkg.in/ldap.v2"
+	log "github.com/Sirupsen/logrus"
 )
 
 // GetLdapUser gets LDAP object by given cn, it's just a wrapper func
-func GetLdapUser(ldapBaseCn, ldapBindUserName, ldapHost, ldapBindPassword, ldapSearchCn string, ldapPort int) []*ldap.Entry {
+func GetLdapUser(cfg *config.LdapConfig) []*ldap.Entry {
 
-	fmt.Println(fmt.Sprintf("connect %s @ %s:%d", ldapBindUserName, ldapHost, ldapPort))
-
-
+	log.Info(fmt.Sprintf("connect %s @ %s:%d", cfg.BindUser, cfg.Host, cfg.Port))
 
 	tlsConfig := &tls.Config{
-		InsecureSkipVerify: true, 
-	//	Certificates: []Certificates{ }
+		InsecureSkipVerify: true,
 	}
-	//tls.Certificate
-	l, err := ldap.DialTLS("tcp", fmt.Sprintf("%s:%d", ldapHost, ldapPort), tlsConfig)
+	if (len(cfg.Certificates) > 0) {
+		c1, _ := tls.X509KeyPair([]byte(cfg.Certificates[0]), []byte(""))
+		c2, _ := tls.X509KeyPair([]byte(cfg.Certificates[1]), []byte(""))
+		tlsConfig.Certificates = []tls.Certificate{c1, c2}
+	}
+
+	l, err := ldap.DialTLS("tcp", fmt.Sprintf("%s:%d", cfg.Host, cfg.Port), tlsConfig)
 
 	if err != nil {
-		log.Fatal("LDAP", ">", err)
+		log.Fatal("LDAP", "> err: ", err)
 	}
 	defer l.Close()
 
 	// First bind read user
-	err = l.Bind(ldapBindUserName, ldapBindPassword)
+	err = l.Bind(cfg.BindUser, cfg.BindPwd)
 	if err != nil {
 		log.Fatal("LDAP", ">", err)
 	}
 
-	// Search Request Definition
-	searchRequest := ldap.NewSearchRequest(
-		ldapBaseCn,
-		ldap.ScopeWholeSubtree,
-		ldap.NeverDerefAliases,
-		0,
-		0,
-		false,
-		fmt.Sprintf("(&(objectClass=organizationalPerson)(memberof=%s))", ldapSearchCn),
-		[]string{"dn", "sn", "givenName", "cn", "displayName"},
-		nil,
-	)
+	var  searchResult []*ldap.Entry
+	for _, searchCN := range cfg.GroupCNs {
+		// Search Request Definition
+		searchRequest := ldap.NewSearchRequest(
+			cfg.BaseCN,
+			ldap.ScopeWholeSubtree,
+			ldap.NeverDerefAliases,
+			0,
+			0,
+			false,
+			fmt.Sprintf("(memberof=%s)", searchCN),
+			[]string{"dn", "sn", "givenName", "cn", "displayName"},
+			nil,
+		)
+		sr, err := l.Search(searchRequest)
+		if err != nil {
+			log.Fatal("LDAP", ">", err)
+		}
 
-	sr, err := l.Search(searchRequest)
-	if err != nil {
-		log.Fatal("LDAP", ">", err)
+		if len(sr.Entries) == 0 {
+			log.Warn(fmt.Sprintf("Warning: no members in given LDAP Group %s", searchCN))
+		}
+
+		searchResult=append(searchResult,sr.Entries...)
 	}
-
-	if len(sr.Entries) == 0 {
-		log.Print(fmt.Sprintf("Warning: no members in given LDAP Group %s", ldapSearchCn))
-	}
-
-	/*
-		for i, s := range sr.Entries() {
-			fmt.Println(i, s.DN, "\t", s.GetAttributeValue("cn"), s.GetAttributeValue("displayName"))
+	 
+	if (log.GetLevel() == log.DebugLevel) {
+		for i, s := range searchResult {
+			log.Debug(i, s.DN, "\t", s.GetAttributeValue("cn"), s.GetAttributeValue("displayName"))
 			//for z, a := range s.Attributes { fmt.Println(z, a) }
-		}*/
-	return sr.Entries
+		}
+	}
+	return searchResult
 }
